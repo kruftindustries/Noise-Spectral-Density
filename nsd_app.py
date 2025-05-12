@@ -9,7 +9,7 @@ from PySide6.QtCharts import (QChart, QChartView, QLineSeries, QValueAxis,
                              QLogValueAxis, QScatterSeries)
 
 # Import our custom pure Python signal processing functions
-import pure_signal as ps
+import signal as ps
 
 class ChartView(QChartView):
     """Qt chart view class for displaying NSD plots"""
