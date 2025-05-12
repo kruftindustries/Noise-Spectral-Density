@@ -1,4 +1,3 @@
-# Noise-Spectral-Density
 # Pure Python Noise Spectral Density (NSD) App
 
 A cross-platform application for estimating noise spectral density (NSD) from time-series data, implemented in Pure Python with PySide6. This app is a recreation of the functionality from [macaba's NSD tool](https://github.com/macaba/NSD/tree/main) with zero external dependencies except for PySide6.
@@ -24,7 +23,7 @@ pip install PySide6
 3. Run the application:
 
 ```bash
-python pure_nsd_app.py
+python nsd_app.py
 ```
 
 ## Input File Format
@@ -57,16 +56,16 @@ Multiple numeric formats are supported, including scientific notation.
 You can generate test data using the included `pure_generate_test_data.py` script:
 
 ```bash
-python pure_generate_test_data.py
+python generate_test_data.py
 ```
 
 This will create a CSV file with simulated ADC noise that includes both white noise and 1/f (pink) noise components, plus some periodic interference.
 
 ## Project Structure
 
-- `pure_nsd_app.py` - Main application with PySide6 GUI
-- `pure_signal.py` - Pure Python implementation of signal processing functions
-- `pure_generate_test_data.py` - Utility to generate test data without external dependencies
+- `nsd_app.py` - Main application with PySide6 GUI
+- `signal.py` - Pure Python implementation of signal processing functions
+- `generate_test_data.py` - Utility to generate test data without external dependencies
 
 ## Implementation Details
 
