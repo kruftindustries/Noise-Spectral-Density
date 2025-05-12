@@ -1,0 +1,473 @@
+"""
+Pure Python implementation of signal processing functions without NumPy dependency.
+"""
+import math
+import cmath
+
+def mean(data):
+    """Calculate the mean of a list of values"""
+    if not data:
+        return 0
+    return sum(data) / len(data)
+
+def std(data):
+    """Calculate the standard deviation of a list of values"""
+    if not data:
+        return 0
+    
+    data_mean = mean(data)
+    variance = sum((x - data_mean) ** 2 for x in data) / len(data)
+    return math.sqrt(variance)
+
+def min_max(data):
+    """Return the minimum and maximum values from a list"""
+    if not data:
+        return 0, 0
+    return min(data), max(data)
+
+def linspace(start, stop, num):
+    """Create a list of evenly spaced numbers over a specified interval"""
+    if num < 2:
+        return [start]
+    step = (stop - start) / (num - 1)
+    return [start + i * step for i in range(num)]
+
+def arange(start, stop=None, step=1):
+    """Return evenly spaced values within a given interval"""
+    if stop is None:
+        stop = start
+        start = 0
+        
+    num = int((stop - start) / step)
+    return [start + i * step for i in range(num)]
+    
+def zeros(n):
+    """Create a list of zeros"""
+    return [0.0] * n
+
+def complex_zeros(n):
+    """Create a list of complex zeros"""
+    return [0.0 + 0.0j] * n
+
+def power(data, p):
+    """Element-wise power operation"""
+    return [x ** p for x in data]
+
+def multiply(data1, data2):
+    """Element-wise multiplication of two lists"""
+    return [a * b for a, b in zip(data1, data2)]
+
+def add(data1, data2):
+    """Element-wise addition of two lists"""
+    return [a + b for a, b in zip(data1, data2)]
+
+def subtract(data1, data2):
+    """Element-wise subtraction of two lists"""
+    return [a - b for a, b in zip(data1, data2)]
+
+def abs_list(data):
+    """Element-wise absolute value of a list"""
+    if all(isinstance(x, complex) for x in data):
+        return [abs(x) for x in data]
+    return [abs(x) for x in data]
+
+def log10(data):
+    """Element-wise base-10 logarithm of a list"""
+    return [math.log10(max(x, 1e-20)) for x in data]
+
+def polyfit(x, y, degree):
+    """Least squares polynomial fit"""
+    # Simplified implementation for linear fit (degree=1)
+    if degree != 1:
+        raise ValueError("Only linear fit (degree=1) is implemented")
+    
+    n = len(x)
+    sum_x = sum(x)
+    sum_y = sum(y)
+    sum_x2 = sum(x_i ** 2 for x_i in x)
+    sum_xy = sum(x_i * y_i for x_i, y_i in zip(x, y))
+    
+    # Calculate slope and intercept
+    slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x ** 2)
+    intercept = (sum_y - slope * sum_x) / n
+    
+    return [intercept, slope]
+
+def polyval(p, x):
+    """Evaluate a polynomial at specific values"""
+    result = []
+    for x_i in x:
+        value = 0
+        for i, coef in enumerate(p):
+            value += coef * (x_i ** (len(p) - i - 1))
+        result.append(value)
+    return result
+
+def hann(M):
+    """
+    Hann window function.
+    """
+    if M < 1:
+        return []
+    if M == 1:
+        return [1.0]
+    
+    result = []
+    for n in range(M):
+        value = 0.5 - 0.5 * math.cos(2.0 * math.pi * n / (M - 1))
+        result.append(value)
+    return result
+
+def hamming(M):
+    """
+    Hamming window function.
+    """
+    if M < 1:
+        return []
+    if M == 1:
+        return [1.0]
+    
+    result = []
+    for n in range(M):
+        value = 0.54 - 0.46 * math.cos(2.0 * math.pi * n / (M - 1))
+        result.append(value)
+    return result
+
+def blackman(M):
+    """
+    Blackman window function.
+    """
+    if M < 1:
+        return []
+    if M == 1:
+        return [1.0]
+    
+    result = []
+    for n in range(M):
+        value = (0.42 - 0.5 * math.cos(2.0 * math.pi * n / (M - 1)) + 
+                0.08 * math.cos(4.0 * math.pi * n / (M - 1)))
+        result.append(value)
+    return result
+
+def bartlett(M):
+    """
+    Bartlett window function (triangular).
+    """
+    if M < 1:
+        return []
+    if M == 1:
+        return [1.0]
+    
+    result = []
+    for n in range(M):
+        value = 1.0 - abs(2.0 * n / (M - 1) - 1.0)
+        result.append(value)
+    return result
+
+def boxcar(M):
+    """
+    Boxcar window function (rectangular).
+    """
+    return [1.0] * M
+
+def flattop(M):
+    """
+    Flat top window function.
+    """
+    if M < 1:
+        return []
+    if M == 1:
+        return [1.0]
+    
+    a = [0.21557, 0.41663, 0.277263, 0.083578, 0.006947]
+    result = [0.0] * M
+    
+    for n in range(M):
+        value = 0.0
+        for i in range(len(a)):
+            value += (-1) ** i * a[i] * math.cos(2 * math.pi * i * n / (M - 1))
+        result[n] = value
+    
+    return result
+
+def get_window(window_type, N):
+    """
+    Get a specific window function by name.
+    """
+    if window_type == 'hann':
+        return hann(N)
+    elif window_type == 'hamming':
+        return hamming(N)
+    elif window_type == 'blackman':
+        return blackman(N)
+    elif window_type == 'bartlett':
+        return bartlett(N)
+    elif window_type == 'boxcar':
+        return boxcar(N)
+    elif window_type == 'flattop':
+        return flattop(N)
+    else:
+        # Default to Hann window
+        return hann(N)
+
+def next_power_of_2(n):
+    """
+    Find the next power of 2 greater than or equal to n.
+    """
+    return 1 if n == 0 else 2 ** ((n - 1).bit_length())
+
+def detrend(x, type='constant'):
+    """
+    Remove linear trend along axis from data.
+    """
+    if type == 'constant':
+        x_mean = mean(x)
+        return [item - x_mean for item in x]
+    elif type == 'linear':
+        n = len(x)
+        t = list(range(n))
+        p = polyfit(t, x, 1)
+        trend = polyval(p, t)
+        return [x_i - trend_i for x_i, trend_i in zip(x, trend)]
+    else:
+        return x.copy()
+
+def fft(x):
+    """
+    Compute the one-dimensional discrete Fourier Transform.
+    Using Cooley-Tukey FFT algorithm.
+    """
+    N = len(x)
+    
+    # Base case for recursion
+    if N <= 1:
+        return x
+    
+    # Recursive case: split into even and odd indices
+    even = fft([x[i] for i in range(0, N, 2)])
+    odd = fft([x[i] for i in range(1, N, 2)])
+    
+    # Combine results
+    result = complex_zeros(N)
+    for k in range(N // 2):
+        t = cmath.exp(-2j * math.pi * k / N) * odd[k]
+        result[k] = even[k] + t
+        result[k + N // 2] = even[k] - t
+    
+    return result
+
+def rfft(x):
+    """
+    Compute the real FFT for real input.
+    """
+    N = len(x)
+    result = fft(x)
+    # For real input, only need first N//2 + 1 points
+    return result[:N//2 + 1]
+
+def rfftfreq(n, d=1.0):
+    """
+    Return the Discrete Fourier Transform sample frequencies.
+    """
+    results = [0.0] * (n // 2 + 1)
+    val = 1.0 / (n * d)
+    N = (n - 1) // 2 + 1
+    for i in range(N):
+        results[i] = i * val
+    
+    return results
+
+def irfft(complex_data, n=None):
+    """
+    Inverse real FFT.
+    """
+    if n is None:
+        n = 2 * (len(complex_data) - 1)
+    
+    # Create the full complex spectrum
+    full_complex = complex_data.copy()
+    for i in range(1, len(complex_data) - (n % 2)):
+        full_complex.append(complex_data[len(complex_data) - i].conjugate())
+    
+    # Compute the inverse FFT
+    result = ifft(full_complex)
+    
+    # For real signals, take the real part
+    return [x.real for x in result]
+
+def ifft(x):
+    """
+    Compute the one-dimensional inverse discrete Fourier Transform.
+    """
+    N = len(x)
+    
+    # Calculate the conjugate of each element
+    x_conj = [value.conjugate() for value in x]
+    
+    # Compute the forward FFT
+    y = fft(x_conj)
+    
+    # Take the conjugate and scale
+    return [value.conjugate() / N for value in y]
+
+def periodogram(x, fs=1.0, window='hann', nfft=None, detrend='constant', 
+               return_onesided=True, scaling='density'):
+    """
+    Estimate power spectral density using a periodogram.
+    """
+    # Make a copy of the input data
+    x = x.copy()
+    
+    # Detrend the data
+    x = detrend(x, detrend)
+    
+    # Apply window function
+    if isinstance(window, str):
+        window = get_window(window, len(x))
+    
+    # Scale by window normalization factor
+    x = multiply(x, window)
+    
+    # Make sure nfft is at least as long as the signal
+    if nfft is None:
+        nfft = next_power_of_2(len(x))
+    
+    # Pad the signal to the desired FFT length
+    if len(x) < nfft:
+        x = x + [0.0] * (nfft - len(x))
+    
+    # Compute the FFT
+    if return_onesided:
+        result = rfft(x)
+        freqs = rfftfreq(nfft, 1.0 / fs)
+    else:
+        result = fft(x)
+        # TODO: Implement fftfreq for two-sided spectrum
+        freqs = []  # Not implemented for this example
+    
+    # Calculate power
+    Pxx = [abs(val) ** 2 for val in result]
+    
+    # Scale the power according to the requested scaling type
+    if scaling == 'density':
+        # Density: divide by sampling freq and scale by window factor
+        scale_factor = 1.0 / (fs * sum([w ** 2 for w in window]))
+        Pxx = [p * scale_factor for p in Pxx]
+    elif scaling == 'spectrum':
+        # Spectrum: scale by window factor
+        scale_factor = 1.0 / sum([w ** 2 for w in window])
+        Pxx = [p * scale_factor for p in Pxx]
+    
+    # Scale the power by 2 for one-sided spectrum (except DC and Nyquist)
+    if return_onesided and nfft % 2 == 0:
+        for i in range(1, len(Pxx) - 1):
+            Pxx[i] = Pxx[i] * 2
+    
+    return freqs, Pxx
+
+def welch(x, fs=1.0, window='hann', nperseg=256, noverlap=None, 
+         nfft=None, detrend='constant', return_onesided=True, 
+         scaling='density', average='mean'):
+    """
+    Estimate power spectral density using Welch's method.
+    """
+    # Make a copy of the input data
+    x = x.copy()
+    
+    # Set default noverlap if not specified
+    if noverlap is None:
+        noverlap = nperseg // 2
+    
+    # Get window function
+    if isinstance(window, str):
+        win = get_window(window, nperseg)
+    else:
+        win = window
+    
+    # Set default nfft if not specified
+    if nfft is None:
+        nfft = next_power_of_2(nperseg)
+    
+    # Ensure valid parameters
+    if nperseg > len(x):
+        nperseg = len(x)
+    
+    if noverlap >= nperseg:
+        noverlap = nperseg - 1
+    
+    # Calculate the number of segments
+    step = nperseg - noverlap
+    num_segments = (len(x) - nperseg) // step + 1
+    
+    # Efficient computation of PSD for first segment to get frequency array
+    freqs, _ = periodogram(
+        x[:nperseg], fs=fs, window=win, nfft=nfft, detrend=detrend,
+        return_onesided=return_onesided, scaling=scaling
+    )
+    n_freqs = len(freqs)
+    
+    # Initialize list to store periodograms
+    psd_list = [zeros(n_freqs) for _ in range(num_segments)]
+    
+    # Compute periodograms for each segment
+    for i in range(num_segments):
+        start = i * step
+        end = start + nperseg
+        segment = x[start:end]
+        
+        _, psd_list[i] = periodogram(
+            segment, fs=fs, window=win, nfft=nfft, detrend=detrend,
+            return_onesided=return_onesided, scaling=scaling
+        )
+    
+    # Average the periodograms
+    Pxx = zeros(n_freqs)
+    
+    if average == 'mean':
+        # Calculate the mean of each frequency bin
+        for freq_idx in range(n_freqs):
+            total = 0.0
+            for seg_idx in range(num_segments):
+                total += psd_list[seg_idx][freq_idx]
+            Pxx[freq_idx] = total / num_segments
+    elif average == 'median':
+        # Calculate the median of each frequency bin
+        for freq_idx in range(n_freqs):
+            values = [psd_list[seg_idx][freq_idx] for seg_idx in range(num_segments)]
+            values.sort()
+            mid = len(values) // 2
+            if len(values) % 2 == 0:
+                Pxx[freq_idx] = (values[mid-1] + values[mid]) / 2
+            else:
+                Pxx[freq_idx] = values[mid]
+    else:
+        # Default to mean
+        for freq_idx in range(n_freqs):
+            total = 0.0
+            for seg_idx in range(num_segments):
+                total += psd_list[seg_idx][freq_idx]
+            Pxx[freq_idx] = total / num_segments
+    
+    return freqs, Pxx
+
+def csv_to_list(filepath, delimiter=','):
+    """
+    Read a CSV file and return a list of values
+    """
+    with open(filepath, 'r') as f:
+        lines = f.readlines()
+    
+    # Remove any trailing whitespace and convert to float
+    data = []
+    for line in lines:
+        line = line.strip()
+        if line:  # Skip empty lines
+            try:
+                # Try to convert the value to float
+                value = float(line)
+                data.append(value)
+            except ValueError:
+                # Skip lines that can't be converted to float
+                continue
+    
+    return data
