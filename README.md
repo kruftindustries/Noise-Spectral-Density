@@ -78,8 +78,6 @@ This version implements all signal processing functions in pure Python, includin
 - Periodogram for direct spectral estimation
 - Basic statistical functions
 
-These implementations prioritize clarity and understanding over performance, making the code excellent for educational purposes.
-
 ## Performance Note
 
 Due to the pure Python implementation of FFT and other algorithms, this version will be slower than the NumPy/SciPy version for large datasets. For production use with large datasets, consider using the version with NumPy/SciPy dependencies.
