@@ -26,6 +26,8 @@ pip install PySide6
 python nsd_app.py
 ```
 
+![Image](https://github.com/user-attachments/assets/aa6bd711-8108-45ac-b048-9a70512968cd)
+
 ## Input File Format
 
 The application expects CSV files with a single column of numeric data, with no header. Example:
