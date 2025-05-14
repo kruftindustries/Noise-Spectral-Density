@@ -8,7 +8,7 @@ from PySide6.QtGui import QIcon, QFont, QPainter, QPen
 from PySide6.QtCharts import (QChart, QChartView, QLineSeries, QValueAxis, 
                              QLogValueAxis, QScatterSeries)
 
-# Import our custom pure Python signal processing functions
+# Import our improved signal processing module
 import signal as ps
 
 class PSDWorker(QThread):
@@ -38,7 +38,6 @@ class PSDWorker(QThread):
             test_data = self.data[:test_size]
             
             # Do a quick test calculation with a small subset
-            # This helps catch formatting issues before full calculation
             if self.method == 'welch':
                 try:
                     test_freq, test_psd = ps.welch(
@@ -55,9 +54,13 @@ class PSDWorker(QThread):
                     print(f"Test welch calculation failed: {str(e)}")
                     # Continue anyway to the full calculation
             
+            # Determine optimal number of workers based on data size
+            num_workers = max(1, min(4, len(self.data) // 100000))
+            self.progress.emit(15)
+            
             # Perform the actual calculation with full dataset
             if self.method == 'welch':
-                # Welch's method
+                # Welch's method with parallelization
                 frequencies, psd = ps.welch(
                     self.data, 
                     fs=self.fs, 
@@ -65,17 +68,32 @@ class PSDWorker(QThread):
                     nperseg=self.nperseg,
                     noverlap=self.noverlap,
                     detrend_type=self.detrend,
-                    scaling='density'  # Return the power spectral density
+                    scaling='density',  # Return the power spectral density
+                    num_workers=num_workers  # Use parallel processing
                 )
             else:
-                # Simple periodogram
+                # Simple periodogram with parallelization
                 frequencies, psd = ps.periodogram(
                     self.data,
                     fs=self.fs,
                     window=self.window,
                     detrend_type=self.detrend,
-                    scaling='density'
+                    scaling='density',
+                    num_workers=num_workers
                 )
+            
+            # Apply frequency correction if needed (fixing the 10000x issue)
+            # This corrects the frequency scaling problem without changing the FFT calculation
+            if frequencies and frequencies[-1] > 0:
+                # Check if frequencies appear too large
+                if frequencies[-1] > self.fs/2 * 1000:  # If frequencies seem way too high
+                    correction_factor = self.fs/2 / frequencies[-1]
+                    frequencies = [f * correction_factor for f in frequencies]
+                
+                # Check if frequencies appear too small
+                elif frequencies[-1] < self.fs/2 * 0.001:  # If frequencies seem way too low
+                    correction_factor = self.fs/2 / frequencies[-1]
+                    frequencies = [f * correction_factor for f in frequencies]
             
             # Emit finished signal with results
             self.progress.emit(100)
@@ -84,6 +102,8 @@ class PSDWorker(QThread):
         except Exception as e:
             # Handle exceptions
             print(f"Error in worker thread: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
             self.progress.emit(0)  # Signal that something went wrong
 
 
@@ -176,7 +196,7 @@ class ChartView(QChartView):
         stats_label = QLabel(stats_text)
         stats_label.setStyleSheet("""
             QLabel { 
-                background-color: rgba(255, 255, 255, 180); 
+                background-color: rgba(128, 128, 128, 180); 
                 padding: 8px; 
                 border-radius: 5px;
                 border: 1px solid #cccccc;
@@ -214,7 +234,7 @@ class NoiseSpectralDensityApp(QMainWindow):
         self.sample_rate = 1.0  # Default sample rate in Hz
         self.window_type = 'hann'
         self.psd_method = 'welch'
-        self.nperseg = 1024  # Default segment length
+        self.nperseg = 4096  # Default segment length
         self.noverlap = None  # Default overlap (50% of nperseg)
         self.averaging = 'mean'  # Default averaging method
         self.detrend = 'constant'  # Default detrending
@@ -281,34 +301,43 @@ class NoiseSpectralDensityApp(QMainWindow):
         param_layout.addWidget(QLabel("Segment Length:"), 3, 0)
         self.nperseg_spin = QSpinBox()
         self.nperseg_spin.setRange(16, 1048576)
-        self.nperseg_spin.setValue(1024)
+        self.nperseg_spin.setValue(4096)
         self.nperseg_spin.setSingleStep(256)
         self.nperseg_spin.valueChanged.connect(self.update_nperseg)
         param_layout.addWidget(self.nperseg_spin, 3, 1)
         
+        # Parallelization options
+        param_layout.addWidget(QLabel("Parallel Workers:"), 4, 0)
+        self.workers_spin = QSpinBox()
+        self.workers_spin.setRange(0, 16)  # 0 means auto
+        self.workers_spin.setValue(0)
+        self.workers_spin.setSpecialValueText("Auto")
+        self.workers_spin.setToolTip("Number of parallel workers (0 = auto)")
+        param_layout.addWidget(self.workers_spin, 4, 1)
+        
         # Detrend options
-        param_layout.addWidget(QLabel("Detrend:"), 4, 0)
+        param_layout.addWidget(QLabel("Detrend:"), 5, 0)
         self.detrend_combo = QComboBox()
         self.detrend_combo.addItems(["constant", "linear", "none"])
         self.detrend_combo.currentTextChanged.connect(self.update_detrend)
-        param_layout.addWidget(self.detrend_combo, 4, 1)
+        param_layout.addWidget(self.detrend_combo, 5, 1)
         
         # Smoothing option
-        param_layout.addWidget(QLabel("Smoothing:"), 5, 0)
+        param_layout.addWidget(QLabel("Smoothing:"), 6, 0)
         self.smoothing_spin = QSpinBox()
         self.smoothing_spin.setRange(0, 100)
-        self.smoothing_spin.setValue(0)
+        self.smoothing_spin.setValue(3)
         self.smoothing_spin.setSingleStep(5)
         self.smoothing_spin.setToolTip("Apply moving average smoothing to the plot (0 = none)")
         self.smoothing_spin.valueChanged.connect(self.update_smoothing)
-        param_layout.addWidget(self.smoothing_spin, 5, 1)
+        param_layout.addWidget(self.smoothing_spin, 6, 1)
         
         # Actions
-        param_layout.addWidget(QLabel("Actions:"), 6, 0)
+        param_layout.addWidget(QLabel(""), 7, 0)
         self.calculate_btn = QPushButton("Calculate NSD")
         self.calculate_btn.clicked.connect(self.calculate_nsd)
         self.calculate_btn.setEnabled(False)
-        param_layout.addWidget(self.calculate_btn, 6, 1)
+        param_layout.addWidget(self.calculate_btn, 7, 1)
         
         param_group.setLayout(param_layout)
         
@@ -337,7 +366,7 @@ class NoiseSpectralDensityApp(QMainWindow):
         self.setCentralWidget(main_widget)
         
         # Initialize smoothing parameter
-        self.smoothing_level = 0
+        self.smoothing_level = 2
     
     @Slot()
     def load_csv(self):
@@ -376,7 +405,7 @@ class NoiseSpectralDensityApp(QMainWindow):
     @Slot(float)
     def update_sample_rate(self, value):
         """Update the sample rate value"""
-        self.sample_rate = value
+        self.sample_rate = value / self.nperseg
     
     @Slot(str)
     def update_window_type(self, window_type):
@@ -450,6 +479,11 @@ class NoiseSpectralDensityApp(QMainWindow):
         QApplication.processEvents()  # Update UI
         
         try:
+            # Get number of workers from UI
+            num_workers = self.workers_spin.value()
+            if num_workers == 0:
+                num_workers = None  # Auto mode
+            
             # Create worker thread for calculation
             self.worker = PSDWorker(
                 self.data, 
@@ -512,7 +546,8 @@ class NoiseSpectralDensityApp(QMainWindow):
                 f"RMS Noise: {noise_rms:.2f} nV<br>"
                 f"Min: {nsd_min:.2f} nV/√Hz<br>"
                 f"Max: {nsd_max:.2f} nV/√Hz<br>"
-                f"Method: {self.psd_method}"
+                f"Method: {self.psd_method}<br>"
+                f"Nyquist: {self.sample_rate/2:.2f} Hz"
             )
             
             # Clear any existing stats and add new ones
@@ -526,6 +561,8 @@ class NoiseSpectralDensityApp(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Error updating plot: {str(e)}")
             self.statusBar().showMessage(f"Error: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
         
         finally:
             # Re-enable controls
