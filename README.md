@@ -26,7 +26,7 @@ pip install PySide6
 python nsd_app.py
 ```
 
-![Image](https://github.com/user-attachments/assets/cbf06833-638d-4be9-920e-437f1e5b7f6c)
+![Image](https://github.com/user-attachments/assets/81461585-b3c9-459d-b6ff-ccda84c5a8a1)
 
 ## Input File Format
 
